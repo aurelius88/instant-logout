@@ -1,0 +1,14 @@
+{
+    "disableAutoUpdate": false,
+    "name": "instant-logout",
+    "author": "aurelius88",
+    "description": "Logout the game without having to wait 10 seconds.",
+    "version": "1.0.0",
+    "options": {
+        "niceName": "Instant Logout"
+    },
+    "servers": ["https://raw.githubusercontent.com/aurelius88/instant-logout/master/"],
+    "supportUrl": "https://github.com/aurelius88/instant-logout/issues",
+    "dependencies": {
+    }
+}
