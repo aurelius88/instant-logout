@@ -1,9 +1,8 @@
 {
-    "disableAutoUpdate": false,
     "name": "instant-logout",
     "author": "aurelius88",
     "description": "Logout the game without having to wait 10 seconds.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "options": {
         "niceName": "Instant Logout"
     },

@@ -1,0 +1,7 @@
+# Manifest-Generator
+mani-gen*
+.mani*
+manifest-gen*
+
+# settings
+*config.json
