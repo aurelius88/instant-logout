@@ -2,7 +2,7 @@
     "name": "instant-logout",
     "author": "aurelius88",
     "description": "Logout the game without having to wait 10 seconds.",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "options": {
         "niceName": "Instant Logout"
     },
