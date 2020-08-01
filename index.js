@@ -1,14 +1,38 @@
 /** Delay time in ms to smooth login process */
-const LOGIN_DELAY = 1500;
 const MESSAGE_TYPES = Object.freeze({
     SHINY: 42, DEFAULT: 31
 });
+const ROOT_COMMAND = 'instantlogout';
+const ROOT_COMMAND_ALT = 'il';
+const MAX_DELAY = 10000; // in ms
+
+function unknown(command) {
+    this.mod.command.message(`Unknown command '${command != undefined ? command : ''}'.`
+        +`\nUse loginDelay <delay from 0ms to 10000ms> to set the delay before login is started.\n`
+        +`Alternative commands: 'logindelay', 'login-delay', 'login delay', 'ld'`);
+}
 
 class InstantLogout {
     constructor(mod) {
+        this.loginDelay = mod.settings.loginDelay;
         this.mod = mod;
         this.timeToIntervals = new Map();
         this.reset();
+
+        this.commands = {
+            "logindelay": this.trySetLoginDelay,
+            "loginDelay": this.trySetLoginDelay,
+            "login-delay": this.trySetLoginDelay,
+            "login": {
+                "delay": this.trySetLoginDelay,
+                "$default": unknown
+            },
+            "ld": this.trySetLoginDelay,
+            "$default": unknown
+        };
+
+        mod.command.add(ROOT_COMMAND, this.commands, this);
+        mod.command.add(ROOT_COMMAND_ALT, this.commands, this);
 
         mod.hook("S_PREPARE_RETURN_TO_LOBBY", 1, e => {
             this.logoutTimeStamp = Date.now() + e.time * 1000;
@@ -21,7 +45,7 @@ class InstantLogout {
                 if (!this.allowLogin && !this.loginTimeout) {
                     this.allowLogin = true;
                     if (this.userPacket)
-                        this.loginTimeout = setTimeout(this.login.bind(this), LOGIN_DELAY, this.userPacket);
+                        this.loginTimeout = setTimeout(this.login.bind(this), this.loginDelay, this.userPacket);
                 }
                 mod.unhook(this.returnHook);
             });
@@ -42,6 +66,25 @@ class InstantLogout {
         });
     }
 
+    trySetLoginDelay(delay) {
+        try {
+            this.setLoginDelay(delay);
+            this.mod.command.message(`Set login delay to ${delay}ms.`);
+        } catch (err) {
+            this.mod.command.message(err.message);
+        }
+    }
+
+    setLoginDelay(delay) {
+        let delayNumber = parseInt(delay);
+        if(isNaN(delayNumber))
+            throw new TypeError(`Delay should be a number.`);
+        if(delay < 0 || delay > MAX_DELAY)
+            throw new RangeError(`Delay should be between 0ms and ${MAX_DELAY}ms, but was ${delay}ms.`);
+        this.mod.settings.loginDelay = delay;
+        this.mod.saveSettings();
+    }
+
     login(data) {
         this.mod.send("C_SELECT_USER", 1, data);
     }
@@ -51,7 +94,7 @@ class InstantLogout {
     }
 
     get loginTimeStamp() {
-        return this.logoutTimeStamp + LOGIN_DELAY;
+        return this.logoutTimeStamp + this.loginDelay;
     }
 
     startMessageInterval(msg, interval, timeStamp, type=MESSAGE_TYPES.SHINY, delay = 0) {

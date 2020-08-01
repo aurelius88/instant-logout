@@ -2,9 +2,13 @@
     "name": "instant-logout",
     "author": "aurelius88",
     "description": "Logout the game without having to wait 10 seconds.",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "options": {
-        "niceName": "Instant Logout"
+        "niceName": "Instant Logout",
+        "settingsVersion": 1,
+        "settingsFile": "config.json",
+        "settingsMigrator": "settings_migrator.js",
+        "settingsAutosaveOnClose": true
     },
     "servers": ["https://raw.githubusercontent.com/aurelius88/instant-logout/master/"],
     "supportUrl": "https://github.com/aurelius88/instant-logout/issues",
