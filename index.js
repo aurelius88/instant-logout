@@ -12,9 +12,28 @@ function unknown(command) {
         +`Alternative commands: 'logindelay', 'login-delay', 'login delay', 'ld'`);
 }
 
+function waitingTime(timeStamp) {
+    let waitTime = timeStamp - Date.now();
+    return waitTime > 0 ? waitTime : 0;
+}
+
+function adjustDelay(delay, timeStamp, tolerance) {
+    if(tolerance < 0 || tolerance > 900)
+        throw new RangeError(`tolerance should be between 0 and 900(ms), but was ${tolerance}.`);
+    if(delay < 0) throw new RangeError(`delay should not be negative, but was ${delay}.`);
+    if(timeStamp < 0) throw new RangeError(`timeStamp should not be negative, but was ${timeStamp}`);
+    let wait = waitingTime(timeStamp);
+    let timeAdjustment = Math.round((wait / 1000 - Math.floor((wait - tolerance) / 1000)) * 1000) - tolerance;
+    console.log(`timestamp: ${timeStamp}, wait: ${wait}, timeAdjustment: ${timeAdjustment}`);
+    return (wait > delay ? delay : 0) + timeAdjustment;
+}
+
+const LOGIN_MSG = "Login";
+const LOGOUT_MSG = "Logout";
+
 class InstantLogout {
     constructor(mod) {
-        this.loginDelay = mod.settings.loginDelay;
+        this.loginDelay = parseInt(mod.settings.loginDelay);
         this.mod = mod;
         this.timeToIntervals = new Map();
         this.reset();
@@ -37,7 +56,7 @@ class InstantLogout {
         mod.hook("S_PREPARE_RETURN_TO_LOBBY", 1, e => {
             this.logoutTimeStamp = Date.now() + e.time * 1000;
             this.allowLogin = false;
-            this.startMessageInterval("Logout", 1000, this.logoutTimeStamp, MESSAGE_TYPES.DEFAULT, 4000);
+            this.startMessageInterval(LOGOUT_MSG, 1000, this.logoutTimeStamp, MESSAGE_TYPES.DEFAULT, 4000);
             // instantly start logout
             mod.toClient("S_RETURN_TO_LOBBY", 1, {});
             this.returnHook = mod.hook("S_RETURN_TO_LOBBY", 1, () => {
@@ -57,9 +76,9 @@ class InstantLogout {
 
         mod.hook("C_SELECT_USER", 1, e => {
             // don't allow login until "S_RETURN_TO_LOBBY" is received
-            if (!this.allowLogin && !this._getInterval(this.loginTimeStamp)) {
-                this.stopMessageInterval(this.logoutTimeStamp);
-                this.startMessageInterval("Login", 1000, this.loginTimeStamp);
+            if (!this.allowLogin && !this._getInterval(LOGIN_MSG + this.loginTimeStamp)) {
+                this.stopMessageInterval(LOGOUT_MSG + this.logoutTimeStamp);
+                this.startMessageInterval(LOGIN_MSG, 1000, this.loginTimeStamp);
                 this.userPacket = e;
             }
             return this.allowLogin;
@@ -79,18 +98,15 @@ class InstantLogout {
         let delayNumber = parseInt(delay);
         if(isNaN(delayNumber))
             throw new TypeError(`Delay should be a number.`);
-        if(delay < 0 || delay > MAX_DELAY)
+        if(delayNumber < 0 || delayNumber > MAX_DELAY)
             throw new RangeError(`Delay should be between 0ms and ${MAX_DELAY}ms, but was ${delay}ms.`);
-        this.mod.settings.loginDelay = delay;
+        this.mod.settings.loginDelay = delayNumber;
         this.mod.saveSettings();
+        this.loginDelay = delayNumber;
     }
 
     login(data) {
         this.mod.send("C_SELECT_USER", 1, data);
-    }
-
-    waitingTime(timeStamp) {
-        return (timeStamp - Date.now()) / 1000;
     }
 
     get loginTimeStamp() {
@@ -98,8 +114,7 @@ class InstantLogout {
     }
 
     startMessageInterval(msg, interval, timeStamp, type=MESSAGE_TYPES.SHINY, delay = 0) {
-        let delayTillRoundTime = delay + this.waitingTime(timeStamp)
-            - Math.floor(this.waitingTime(timeStamp));
+        let delayTillRoundTime = adjustDelay(delay, timeStamp, 50);
         setTimeout(
             this.waitingTimeInterval.bind(this),
             delayTillRoundTime,
@@ -110,14 +125,15 @@ class InstantLogout {
         );
     }
 
-    stopMessageInterval(timeStamp) {
-        clearInterval(this._getInterval(timeStamp));
-        this._removeInterval(timeStamp);
+    stopMessageInterval(uniqueName) {
+        clearInterval(this._getInterval(uniqueName));
+        this._removeInterval(uniqueName);
     }
 
     waitingTimeInterval(msg, interval, timeStamp, type=MESSAGE_TYPES.SHINY) {
-        this.sendMessage(`${msg} in ${Math.round(this.waitingTime(timeStamp))} seconds.`);
-        this._addInterval(timeStamp, setInterval(
+        let seconds = Math.round(waitingTime(timeStamp)/1000);
+        this.sendMessage(`${msg} in ${seconds} second${seconds>1?'s':''}`, type);
+        this._addInterval(msg+timeStamp, setInterval(
             this.sendWaitingTimeMessage.bind(this),
             interval,
             msg,
@@ -126,17 +142,17 @@ class InstantLogout {
     }
 
     sendWaitingTimeMessage(msg, timeStamp, type) {
-        let currentTime = Math.round(this.waitingTime(timeStamp));
-        let finalMsg = `${msg} in ${currentTime} seconds.`;
-        if (currentTime < 1) {
-            clearInterval(this._getInterval(timeStamp));
-            this._removeInterval(timeStamp);
+        let seconds = Math.round(waitingTime(timeStamp)/1000);
+        let finalMsg = `${seconds}`;
+        if (seconds < 1) {
+            clearInterval(this._getInterval(msg+timeStamp));
+            this._removeInterval(msg+timeStamp);
             finalMsg = `${msg}!`;
         }
         this.sendMessage(finalMsg, type);
     }
 
-    sendMessage(msg, type) {
+    sendMessage(msg, type=MESSAGE_TYPES.SHINY) {
         this.mod.toClient("S_DUNGEON_EVENT_MESSAGE", 2, {
             type: type, // 42 Blue Shiny Text, 31 Normal Text
             chat: 0,
@@ -145,18 +161,18 @@ class InstantLogout {
         });
     }
 
-    _addInterval(timeStamp, interval) {
-        let tmpInterval = this.timeToIntervals.get(timeStamp);
+    _addInterval(uniqueName, intervalId) {
+        let tmpInterval = this.timeToIntervals.get(uniqueName);
         if(tmpInterval != undefined) clearInterval(tmpInterval);
-        this.timeToIntervals.set(timeStamp, interval);
+        this.timeToIntervals.set(uniqueName, intervalId);
     }
 
-    _getInterval(timeStamp) {
-        return this.timeToIntervals.get(timeStamp);
+    _getInterval(uniqueName) {
+        return this.timeToIntervals.get(uniqueName);
     }
 
-    _removeInterval(timeStamp) {
-        return this.timeToIntervals.delete(timeStamp);
+    _removeInterval(uniqueName) {
+        return this.timeToIntervals.delete(uniqueName);
     }
 
     reset() {
