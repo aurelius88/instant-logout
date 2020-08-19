@@ -1,7 +1,8 @@
 "use strict";
 
 const DefaultSettings = {
-    loginDelay: 1500
+    loginDelay: 1500,
+    messageDelay: 4000
 };
 
 // from_ver, to_ver = version number; settings = "old settings"
@@ -12,6 +13,8 @@ module.exports = function MigrateSettings(from_ver, to_ver, settings) {
         return DefaultSettings;
     } else if (from_ver === undefined) {
         // Migrate legacy config file
+        return Object.assign(defaultCopy, settings);
+    } else {
         return Object.assign(defaultCopy, settings);
     }
 };
@@ -24,5 +27,6 @@ function notEmptyObject(obj) {
 // only set remove -> remove
 // set both -> replace/update
 const commitsByVersion = new Map([
-    [1, { add: { loginDelay: 1500 }, remove: {} }]
+    [1, { add: { loginDelay: 1500 }, remove: {} }],
+    [2, { add: { messageDelay: 4000 }, remove: {} }]
 ]);
