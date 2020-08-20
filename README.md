@@ -4,10 +4,10 @@ Logout the game without having to wait 10 seconds.
 
 ## Commands
 
-Root command is 'instantlogout' or 'il'
+Instead of `instantlogout` you can also write `il`.
 
-Sub command        | Description
------------------- | ---------------------------------------------------------------------------------------------------------
-config             | Displays current settings
-messagedelay delay | Sets the delay time in milliseconds of when to start displaying messages after pressing the logout button
-logindelay delay   | Sets the delay time in milliseconds of when to login into the game after receiving logout event
+Command                                | Description                                                                                                                                                                                                | Alternativ Commands
+-------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------
+instantlogout **config**               | Displays current settings
+instantlogout **messagedelay** `delay` | Sets the delay time for displaying messages to the given `delay` in milliseconds. The message delay time delays the start of displaying messages after pressing the logout button. _(Default delay: 4000)_ | **md**, **message delay**
+instantlogout **logindelay** `delay`   | Sets the delay time for login to the given `delay` in milliseconds. The login delay time delays the login into the game after receiving logout event. _(Default delay: 1500)_                              | **ld**, **login delay**
