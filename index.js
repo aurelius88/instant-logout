@@ -1,10 +1,12 @@
-/** Delay time in ms to smooth login process */
 const MESSAGE_TYPES = Object.freeze({
     SHINY: 42, DEFAULT: 31
 });
 const ROOT_COMMAND = 'instantlogout';
 const ROOT_COMMAND_ALT = 'il';
 const MAX_DELAY = 10000; // in ms
+const INTERVAL_TIME = 1000; // in ms
+const LOGIN_MSG = "Login";
+const LOGOUT_MSG = "Logout";
 
 function unknown(command) {
     this.mod.command.message(`Unknown sub command '${command != undefined ? command : ''}'.`
@@ -30,15 +32,11 @@ function adjustDelay(delay, timeStamp, tolerance) {
     return (wait > delay ? delay : 0) + timeAdjustment;
 }
 
-const LOGIN_MSG = "Login";
-const LOGOUT_MSG = "Logout";
-
 class InstantLogout {
     constructor(mod) {
         this.loginDelay = parseInt(mod.settings.loginDelay);
         this.messageDelay = parseInt(mod.settings.messageDelay);
         this.mod = mod;
-        this.timeToIntervals = new Map();
         this.reset();
 
         this.commands = {
@@ -67,18 +65,18 @@ class InstantLogout {
             this.logoutTimeStamp = Date.now() + e.time * 1000;
             this.allowLogin = false;
             this.msg = LOGOUT_MSG;
-            // TODO delay -> configureable
-            this.startMessageInterval(1000, MESSAGE_TYPES.DEFAULT, this.messageDelay);
+            this.startMessageInterval(INTERVAL_TIME, MESSAGE_TYPES.DEFAULT, this.messageDelay);
             // instantly start logout
             mod.toClient("S_RETURN_TO_LOBBY", 1, {});
-            this.returnHook = mod.hook("S_RETURN_TO_LOBBY", 'event', () => {
-                this.allowLogin = true;
-                if (!this.loginTimeout && this.userPacket) {
-                    this.loginTimeout = setTimeout(this.login.bind(this), this.loginDelay, this.userPacket);
-                }
-                mod.unhook(this.returnHook);
-                return false;
-            });
+            this.returnHook = mod.hook("S_RETURN_TO_LOBBY", 'event',
+                { order: 0, filter: { fake: false, modified: null, silenced: null } }, () => {
+                    this.allowLogin = true;
+                    if (!this.loginTimeout && this.userPacket) {
+                        this.loginTimeout = setTimeout(this.login.bind(this), this.loginDelay, this.userPacket);
+                    }
+                    mod.unhook(this.returnHook);
+                    return false;
+                });
         });
 
         // logged in to tera world
@@ -89,14 +87,21 @@ class InstantLogout {
         // select character for login
         mod.hook("C_SELECT_USER", 1, e => {
             // don't allow login until "S_RETURN_TO_LOBBY" is received
-            if (!this.allowLogin && !this.userPacket) {
-                let seconds = Math.round(waitingTime(this.loginTimeStamp)/1000);
-                this.msg = LOGIN_MSG;
-                if(seconds > 0)
-                    this.sendMessage(`${this.msg} in ${seconds} second${seconds != 1?'s':''}`);
-                this.userPacket = e;
+            if (!this.allowLogin) {
+                if(!this.userPacket) {
+                    let seconds = Math.ceil(waitingTime(this.loginTimeStamp)/1000);
+                    this.msg = LOGIN_MSG;
+                    if(seconds > 0) {
+                        if(!this.interval) {
+                            this.startMessageInterval(INTERVAL_TIME);
+                        } else {
+                            this.sendMessage(`${this.msg} in ${seconds} second${seconds != 1?'s':''}`);
+                        }
+                    } else { this.sendMessage(`${this.msg}!`); }
+                    this.userPacket = e;
+                }
+                return false;
             }
-            return this.allowLogin;
         });
     }
 
@@ -177,11 +182,12 @@ class InstantLogout {
             type);
     }
 
-    sendWaitingTimeMessage(type) {
+    sendWaitingTimeMessage(type=MESSAGE_TYPES.SHINY) {
         let seconds = Math.round(waitingTime(this.timeStamp)/1000);
         if (seconds < 1) {
             this.sendMessage(`${this.msg}!`, type);
             clearInterval(this.interval);
+            this.interval = null;
         } else this.sendMessage(`${seconds}`, type);
     }
 
@@ -196,11 +202,9 @@ class InstantLogout {
 
     reset() {
         if (this.loginTimeout) clearInterval(this.loginTimeout);
-        for(let interval of this.timeToIntervals.values()) {
-            clearInterval(interval);
-        }
-        this.timeToIntervals.clear();
+        if (this.interval) clearInterval(this.interval);
         this.loginTimeout = null;
+        this.interval = null;
         this.logoutTimeStamp = 0;
         this.allowLogin = true;
         this.userPacket = null;
