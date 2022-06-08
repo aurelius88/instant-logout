@@ -1,3 +1,4 @@
+// 2,19-23,38-39,41-74,80-81; 
 const MESSAGE_TYPES = Object.freeze({
     SHINY: 42, DEFAULT: 31
 });
@@ -7,6 +8,30 @@ const MAX_DELAY = 10000; // in ms
 const INTERVAL_TIME = 1000; // in ms
 const LOGIN_MSG = "Login";
 const LOGOUT_MSG = "Logout";
+
+const HELP = {
+    "config": this.showConfig,
+    "logindelay": {
+        args: ["delay"],
+        alt: ["login-delay", "login delay", "ld"],
+        msg: `to set the delay before login is initiated`,
+    },
+    "messagedelay": {
+        args: ["delay"],
+        alt: ["message-delay", "message delay", "md"],
+        msg: `to set the delay before login is initiated`,
+    },
+    "test-types": {
+        args: [],
+        alt: [],
+        msg: `test purpose`,
+    },
+    "test-type": {
+        args: ['type'],
+        alt: [],
+        msg: `2,19-23,38-39,41-74,80-81`,
+    },
+}
 
 function unknown(command) {
     this.mod.command.message(`Unknown sub command '${command != undefined ? command : ''}'.`
@@ -55,6 +80,8 @@ class InstantLogout {
                 "$default": unknown
             },
             "md": this.trySetMessageDelay,
+            "test-types": this.testAllTypes,
+            "test-type": this.testType,
             "$default": unknown
         };
 
@@ -193,11 +220,40 @@ class InstantLogout {
 
     sendMessage(msg, type=MESSAGE_TYPES.SHINY) {
         this.mod.toClient("S_DUNGEON_EVENT_MESSAGE", 2, {
-            type: type, // 42 Blue Shiny Text, 31 Normal Text
+            type: type, // 2,19-23,38-39,41-74,80-81; 42 Blue Shiny Text, 31 Normal Text
             chat: 0,
-            channel: 27,
+            channel: 0, // say = 0, party = 1, guild = 2, area = 3, trade = 4, greet = 9, private = 11-18, p-notice = 21, emote = 26, global = 27, r-notice = 25, raid = 32, megaphone = 213, guild-adv = 214
             message: msg
         });
+    }
+
+
+
+    testAllTypes(intervalTime=INTERVAL_TIME) {
+        this.testValues = [2,19,20,21,22,23,38,39];
+        let testValues2 =[];
+        for(let i = 41; i < 74; i++)
+            testValues2.push(i);
+        this.testValues = this.testValues.concat(testValues2).concat([80,81]);
+
+        this.testIndex = 0;
+        this.interval = setInterval(
+            this.testTypeInterval.bind(this),
+            intervalTime);
+    }
+
+    testTypeInterval() {
+        if(this.testIndex < this.testValues.length)
+            this.testType(this.testValues[this.testIndex])
+        else {
+            clearInterval(this.interval);
+            this.interval = null;
+        }
+    }
+
+    testType(type) {
+        if(type == null) this.mod.message(`Try 2,19-23,38-39,41-74,80-81`);
+        this.sendMessage(`Type is ${type}`, type);
     }
 
     reset() {
