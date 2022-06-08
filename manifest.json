@@ -1,9 +1,15 @@
 {
     "files": {
-        "index.js": "1a8642ca6cb905b273cc576d4a7e74309c8c6311118fe31e397fa4a43fa4fb5d",
-        "module.json": "abf89bb80965e40fd2377b28d4f365e524eb932f0f442190ac24ad8f1d776c41",
+        "index.js": "03ffbe694bf32b306745443adc679f4319aee8557f6596cf10b41320bd02dd8a",
+        "module.json": "e64dafe950fe3140d52e13cf00ea66b6396cd642fc36f8976ad75d5bfcd60641",
         "README.md": "39627ef5ef80ce622fd6e2f83a7513c91698aac9f289c05bf1602dcbd9b70d1f",
-        "settings_migrator.js": "bfdad3b33ac30c4578c2753cc35cf7318a0fc030890696abcd07556cb14c6352"
+        "settings_migrator.js": "2da11b3fdb339cbdf91264c89920f0acf8d9ee0edef5b8180d50b1b600c00477"
     },
-    "defs": {}
+    "defs": {
+        "S_PREPARE_RETURN_TO_LOBBY": ["1"],
+        "S_RETURN_TO_LOBBY": ["1"],
+        "S_LOGIN": "event",
+        "C_SELECT_USER": ["1"],
+        "S_DUNGEON_EVENT_MESSAGE": ["2"]
+    }
 }

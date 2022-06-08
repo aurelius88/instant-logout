@@ -2,7 +2,8 @@
 
 const DefaultSettings = {
     loginDelay: 1500,
-    messageDelay: 4000
+    messageDelay: 4000,
+    messageStyleIndex: 0,
 };
 
 // from_ver, to_ver = version number; settings = "old settings"
@@ -28,5 +29,6 @@ function notEmptyObject(obj) {
 // set both -> replace/update
 const commitsByVersion = new Map([
     [1, { add: { loginDelay: 1500 }, remove: {} }],
-    [2, { add: { messageDelay: 4000 }, remove: {} }]
+    [2, { add: { messageDelay: 4000 }, remove: {} }],
+    [3, { add: { messageStyleIndex: 0 }, remove: {}}]
 ]);
